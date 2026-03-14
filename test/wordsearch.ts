@@ -1,10 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {
-  findWords,
-  parseWordSearchGrid,
-  WordSearchDirection,
-  WordSearchSpaceTreatment,
-} from '../src';
+import {findWords, parseWordSearchGrid, WordSearchDirection} from '../src';
 import {WordSearchResult} from '../src';
 
 function assertResultsContainsWord(results: WordSearchResult[], word: string) {
@@ -173,56 +168,79 @@ describe('WordSearchSolver', () => {
       expect(results.length).toBe(2);
     });
 
-    it('Remove all spaces', () => {
-      const matrix = [
-        ['p', 'x', 'x', ' ', 'x'],
-        ['u', 'w', 'i', ' ', 'n'],
-        ['z', 'x', 'x', ' ', 'x'],
-        [' ', ' ', ' ', ' ', ' '],
-        ['z', 'x', 'x', ' ', 'x'],
-      ];
-      const results = findWords({
-        grid: matrix,
-        words: ['puzz', 'win', 'foo', 'bar', 'baz'],
-        spaceTreatment: WordSearchSpaceTreatment.RemoveAll,
-      });
-      assertResultsContainsWord(results, 'puzz');
-      assertResultsContainsWord(results, 'win');
-
-      expect(results.length).toBe(2);
-    });
-
-    it('Remove spaces in puzzle', () => {
-      const matrix = [
-        [' ', 'p', 'x', 'x', ' ', 'x'],
-        [' ', 'u', 'w', 'i', ' ', 'n'],
-        [' ', 'z', 'x', 'x', ' ', 'x'],
-        [' ', ' ', ' ', ' ', ' ', ' '],
-        [' ', 'z', 'x', 'x', ' ', 'x'],
-      ];
-      const results = findWords({
-        grid: matrix,
-        words: ['puzz', 'win', 'foo', 'bar', 'baz'],
-        spaceTreatment: WordSearchSpaceTreatment.RemoveWithinPuzzle,
-      });
-      assertResultsContainsWord(results, 'puzz');
-      assertResultsContainsWord(results, 'win');
-
-      expect(results.length).toBe(2);
-    });
-
-    it('Parse spaces', () => {
-      const input = 'px xx\nuw  in\nzx  xx\nzx  xx\n';
+    it('parseWordSearchGrid collapses uniform space columns', () => {
+      // Simulates pasting "A B C D" style grid
+      const input = 'p x x x\nu w i n\nz x x x\nz x x x\n';
       const grid = parseWordSearchGrid(input);
       const results = findWords({
         grid,
-        words: ['puzz', 'win', 'foo', 'bar', 'baz'],
-        spaceTreatment: WordSearchSpaceTreatment.RemoveAll,
+        words: ['puzz', 'win'],
       });
       assertResultsContainsWord(results, 'puzz');
       assertResultsContainsWord(results, 'win');
-
       expect(results.length).toBe(2);
+    });
+
+    it('parseWordSearchGrid preserves irregular spaces', () => {
+      // Space in column 2 is NOT uniform (has letters in other rows)
+      const input = 'ABCDE\nAB DE\nABCDE\n';
+      const grid = parseWordSearchGrid(input);
+      // Column 2 kept because rows 0 and 2 have 'C'
+      expect(grid[0]).toEqual(['A', 'B', 'C', 'D', 'E']);
+      expect(grid[1]).toEqual(['A', 'B', ' ', 'D', 'E']);
+      expect(grid[2]).toEqual(['A', 'B', 'C', 'D', 'E']);
+    });
+
+    it('parseWordSearchGrid handles pasted grid with cutout', () => {
+      // Pasted with spaces between letters, plus a cutout
+      const input = 'A B C\nA   C\nA B C\n';
+      const grid = parseWordSearchGrid(input);
+      // Columns 1, 3 are all spaces → removed
+      // Column 2 has B, space, B → kept
+      expect(grid[0]).toEqual(['A', 'B', 'C']);
+      expect(grid[1]).toEqual(['A', ' ', 'C']);
+      expect(grid[2]).toEqual(['A', 'B', 'C']);
+    });
+
+    it('parseWordSearchGrid filters blank and all-spaces lines', () => {
+      const input = 'ABCD\n\n   \nEFGH\n';
+      const grid = parseWordSearchGrid(input);
+      expect(grid.length).toBe(2);
+      expect(grid[0]).toEqual(['A', 'B', 'C', 'D']);
+      expect(grid[1]).toEqual(['E', 'F', 'G', 'H']);
+    });
+
+    it('Diamond-shaped grid with findWords', () => {
+      // Diamond shape using spaces:
+      //   f
+      //  oo
+      // oox
+      //  xx
+      //   x
+      const input = '  f\n oo\noox\n xx\n  x\n';
+      const grid = parseWordSearchGrid(input);
+      expect(grid.length).toBe(5);
+      expect(grid[0]).toEqual([' ', ' ', 'f']);
+      expect(grid[1]).toEqual([' ', 'o', 'o']);
+      expect(grid[2]).toEqual(['o', 'o', 'x']);
+      const results = findWords({grid, words: ['foo']});
+      assertResultsContainsWord(results, 'foo');
+      expect(results.length).toBe(1);
+    });
+
+    it('Grid with interior cutout preserves shape for search', () => {
+      // 5x5 grid with a hole in the middle
+      const input = 'abcde\nfghij\nkl mn\nopqrs\ntuvwx\n';
+      const grid = parseWordSearchGrid(input);
+      // No columns are entirely spaces, so grid is unchanged
+      expect(grid.length).toBe(5);
+      expect(grid[2]).toEqual(['k', 'l', ' ', 'm', 'n']);
+      // Vertical word 'afkot' crosses through column 0 (no spaces)
+      const results = findWords({grid, words: ['afkot']});
+      assertResultsContainsWord(results, 'afkot');
+      // Word 'glq' would need to cross the space — should not match
+      const crossHole = findWords({grid, words: ['glq']});
+      expect(crossHole.length).toBe(0);
     });
   });
 
