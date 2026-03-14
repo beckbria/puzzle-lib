@@ -48,6 +48,54 @@ describe('Conversions', () => {
       expect(convertString('020 120 120', true)).toBe('FOO');
     });
 
+    it('convertString - continuous binary auto-chunking', () => {
+      // 8-bit continuous binary ("Your base belongs to us.")
+      const yourBase = [
+        '01011001',
+        '01101111',
+        '01110101',
+        '01110010',
+        '00100000',
+        '01100010',
+        '01100001',
+        '01110011',
+        '01100101',
+        '00100000',
+        '01100010',
+        '01100101',
+        '01101100',
+        '01101111',
+        '01101110',
+        '01100111',
+        '01110011',
+        '00100000',
+        '01110100',
+        '01101111',
+        '00100000',
+        '01110101',
+        '01110011',
+        '00101110',
+      ].join('');
+      expect(convertString(yourBase, true)).toBe('Your base belongs to us.');
+      // 7-bit continuous binary
+      const cab7 = ['1000011', '1000001', '1000010'].join('');
+      expect(convertString(cab7, true)).toBe('CAB');
+      const hello7 = [
+        '1001000',
+        '1100101',
+        '1101100',
+        '1101100',
+        '1101111',
+      ].join('');
+      expect(convertString(hello7, true)).toBe('Hello');
+      const digits7 = ['0110000', '0110001', '0111001'].join('');
+      expect(convertString(digits7, true)).toBe('019');
+      // 5-bit continuous binary ("ABCDE")
+      expect(convertString('0000100010000110010000101', true)).toBe('ABCDE');
+      // Short binary should still work normally
+      expect(convertString('01100001', true)).toBe('a');
+    });
+
     it('convertString - varied encoding', () => {
       expect(convertString('999 999', false)).toBe('');
       expect(convertString('01000101 24 121 10010 5    SS', false)).toBe(
