@@ -33,6 +33,15 @@ describe('Conversions', () => {
         CharacterEncoding.None,
       );
       expect(determineStringEncoding('')).toBe(CharacterEncoding.None);
+      // Hex tiebreaker: mix of unambiguous hex (6c, 6f) and ambiguous
+      // all-digit tokens (48, 65), all are valid printable hex so hex wins
+      expect(determineStringEncoding('48 65 6c 6c 6f')).toBe(
+        CharacterEncoding.Hexadecimal,
+      );
+      // All-digit tokens that are only valid as hex
+      expect(determineStringEncoding('41 42 43')).toBe(
+        CharacterEncoding.Hexadecimal,
+      );
     });
 
     it('convertString - consistent encoding', () => {
@@ -46,6 +55,9 @@ describe('Conversions', () => {
         ),
       ).toBe('PLANET');
       expect(convertString('020 120 120', true)).toBe('FOO');
+      expect(convertString('48 65 6c 6c 6f', true)).toBe('Hello');
+      // All-digit hex tokens (no a-f) detected via fallback
+      expect(convertString('41 42 43', true)).toBe('ABC');
     });
 
     it('convertString - continuous binary auto-chunking', () => {
@@ -128,6 +140,30 @@ describe('Conversions', () => {
         CharacterEncoding.FiveBitBinary,
       );
       expect(determineCharacterEncoding('1')).toBe(CharacterEncoding.Ordinal);
+      // All-digit hex tokens: prefer decimal when valid, fall back to hex
+      expect(determineCharacterEncoding('76')).toBe(CharacterEncoding.Ascii);
+      // 41 is not ordinal (>26) or ASCII (not 65-90), but is valid printable hex
+      expect(determineCharacterEncoding('41')).toBe(
+        CharacterEncoding.Hexadecimal,
+      );
+    });
+
+    it('determineCharacterEncoding - Hexadecimal', () => {
+      expect(determineCharacterEncoding('4a')).toBe(
+        CharacterEncoding.Hexadecimal,
+      );
+      expect(determineCharacterEncoding('4A')).toBe(
+        CharacterEncoding.Hexadecimal,
+      );
+      // Purely alphabetic 2-char tokens are Latin, not hex
+      expect(determineCharacterEncoding('ab')).toBe(CharacterEncoding.Latin);
+      expect(determineCharacterEncoding('be')).toBe(CharacterEncoding.Latin);
+      expect(determineCharacterEncoding('ff')).toBe(CharacterEncoding.Latin);
+      expect(determineCharacterEncoding('0a')).toBe(
+        CharacterEncoding.Hexadecimal,
+      );
+      // 3+ hex chars don't match (only 2-char tokens supported)
+      expect(determineCharacterEncoding('4a5')).toBe(CharacterEncoding.Latin);
     });
 
     it('convertCharacter', () => {
@@ -143,6 +179,18 @@ describe('Conversions', () => {
       expect(convertCharacter('1000011')).toBe('C');
       expect(convertCharacter('999')).toBe('');
       expect(convertCharacter('136')).toBe('');
+    });
+
+    it('convertCharacter - Hexadecimal', () => {
+      expect(convertCharacter('4a')).toBe('J');
+      expect(convertCharacter('4A')).toBe('J');
+      expect(convertCharacter('41', CharacterEncoding.Hexadecimal)).toBe('A');
+      expect(convertCharacter('5a', CharacterEncoding.Hexadecimal)).toBe('Z');
+      expect(convertCharacter('61', CharacterEncoding.Hexadecimal)).toBe('a');
+      expect(convertCharacter('7a', CharacterEncoding.Hexadecimal)).toBe('z');
+      // Non-printable
+      expect(convertCharacter('01', CharacterEncoding.Hexadecimal)).toBe('');
+      expect(convertCharacter('ff', CharacterEncoding.Hexadecimal)).toBe('');
     });
 
     it('forceCharacterEncoding', () => {

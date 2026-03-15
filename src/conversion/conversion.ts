@@ -2,6 +2,7 @@ import {CharacterEncoding} from './character-encoding.js';
 
 const BINARY_REGEX = /^[01]+$/;
 const TERNARY_REGEX = /^[0-2]{3}$/;
+const HEX_REGEX = /^[0-9a-f]{2}$/i;
 
 function appearsBinary(str: string): boolean {
   return BINARY_REGEX.test(str);
@@ -19,9 +20,25 @@ function asciiPrintable(index: number): string {
 }
 
 /**
+ * Checks if a token could be valid printable hex.
+ */
+function appearsHexPrintable(input: string): boolean {
+  if (!HEX_REGEX.test(input)) {
+    return false;
+  }
+  const hex = Number.parseInt(input, 16);
+  return hex >= 32 && hex <= 126;
+}
+
+/**
  * Determines the character encoding of a single input token.
  */
 export function determineCharacterEncoding(input: string): CharacterEncoding {
+  // Unambiguous hex: 2 hex chars with at least one a-f letter and at least one digit
+  if (HEX_REGEX.test(input) && /[a-f]/i.test(input) && /[0-9]/.test(input)) {
+    return CharacterEncoding.Hexadecimal;
+  }
+
   if (input.match(/[a-z]/i)) {
     return CharacterEncoding.Latin;
   }
@@ -51,6 +68,11 @@ export function determineCharacterEncoding(input: string): CharacterEncoding {
     return CharacterEncoding.Ascii;
   }
 
+  // All-digit 2-char tokens that aren't decimal but are valid printable hex
+  if (appearsHexPrintable(input)) {
+    return CharacterEncoding.Hexadecimal;
+  }
+
   return CharacterEncoding.None;
 }
 
@@ -75,6 +97,14 @@ export function convertCharacter(
   const baseTen = Number.parseInt(input, 10);
   if (encoding === CharacterEncoding.Ascii) {
     return asciiPrintable(baseTen);
+  }
+
+  if (encoding === CharacterEncoding.Hexadecimal) {
+    const hex = Number.parseInt(input, 16);
+    if (Number.isNaN(hex)) {
+      return '';
+    }
+    return asciiPrintable(hex);
   }
 
   const asciiOffset = 64;
@@ -123,6 +153,8 @@ function splitString(input: string): string[] {
 
 /**
  * Determines the most common encoding across all tokens in a string.
+ * When hex and decimal encodings are mixed, tries hex for all tokens
+ * and picks whichever produces more printable results.
  */
 export function determineStringEncoding(input: string): CharacterEncoding {
   const encodingCount: {[index: number]: number} = {};
@@ -149,6 +181,30 @@ export function determineStringEncoding(input: string): CharacterEncoding {
       maxEncoding = encoding;
     }
   }
+
+  // Tiebreaker: if we have a mix of hex and decimal (Ascii/Ordinal) and the
+  // most common encoding is a decimal type, check if interpreting everything
+  // as hex produces more printable results.
+  const hasHex = encodingCount[CharacterEncoding.Hexadecimal] > 0;
+  const maxIsDecimal =
+    maxEncoding === CharacterEncoding.Ascii ||
+    maxEncoding === CharacterEncoding.Ordinal;
+
+  if (hasHex && maxIsDecimal) {
+    const hexPrintable = parsed.filter(
+      t =>
+        appearsHexPrintable(t) &&
+        convertCharacter(t, CharacterEncoding.Hexadecimal) !== '',
+    ).length;
+    const decPrintable = parsed.filter(
+      t => convertCharacter(t, maxEncoding) !== '',
+    ).length;
+
+    if (hexPrintable > decPrintable) {
+      return CharacterEncoding.Hexadecimal;
+    }
+  }
+
   return maxEncoding;
 }
 
