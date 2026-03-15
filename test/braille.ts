@@ -1,13 +1,13 @@
 import {describe, it, expect} from 'vitest';
+import {EncodingCategory} from '../src/common/index.js';
 import {
-  EncodingCategory,
   BrailleDot,
   BrailleEncoding,
   lookupBrailleEncoding,
   toggleBrailleDot,
   getBrailleDot,
   decodeBrailleStream,
-} from '../src';
+} from '../src/braille/index.js';
 
 describe('Braille', () => {
   describe('lookupBrailleEncoding', () => {

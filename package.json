@@ -1,9 +1,50 @@
 {
   "name": "puzzle-lib",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0-beta.2",
   "description": "Library of puzzle-solving algorithms",
-  "main": "build/src/index.js",
-  "types": "build/src/index.d.ts",
+  "type": "module",
+  "exports": {
+    "./braille": {
+      "types": "./build/src/braille/index.d.ts",
+      "default": "./build/src/braille/index.js"
+    },
+    "./cipher": {
+      "types": "./build/src/cipher/index.d.ts",
+      "default": "./build/src/cipher/index.js"
+    },
+    "./common": {
+      "types": "./build/src/common/index.d.ts",
+      "default": "./build/src/common/index.js"
+    },
+    "./conversion": {
+      "types": "./build/src/conversion/index.d.ts",
+      "default": "./build/src/conversion/index.js"
+    },
+    "./morse": {
+      "types": "./build/src/morse/index.d.ts",
+      "default": "./build/src/morse/index.js"
+    },
+    "./nato": {
+      "types": "./build/src/nato/index.d.ts",
+      "default": "./build/src/nato/index.js"
+    },
+    "./naval-flags": {
+      "types": "./build/src/naval-flags/index.d.ts",
+      "default": "./build/src/naval-flags/index.js"
+    },
+    "./resistor": {
+      "types": "./build/src/resistor/index.d.ts",
+      "default": "./build/src/resistor/index.js"
+    },
+    "./semaphore": {
+      "types": "./build/src/semaphore/index.d.ts",
+      "default": "./build/src/semaphore/index.js"
+    },
+    "./word-search": {
+      "types": "./build/src/word-search/index.d.ts",
+      "default": "./build/src/word-search/index.js"
+    }
+  },
   "files": [
     "build/src",
     "src"
@@ -30,6 +71,7 @@
   "homepage": "https://github.com/puzztool/puzzle-lib#readme",
   "devDependencies": {
     "@types/node": "^20.19.33",
+    "eslint-plugin-check-file": "^3.3.1",
     "gts": "^7.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
